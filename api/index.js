@@ -62,6 +62,18 @@ module.exports = async (req, res) => {
     res.setHeader(key, value);
   });
 
+  // API Key Authentication
+  const apiKey = req.headers['x-api-key'] || req.query.api_key;
+  const validApiKey = process.env.API_KEY;
+
+  if (!validApiKey) {
+    return res.status(500).json({ error: 'Server configuration error: API_KEY not set' });
+  }
+
+  if (!apiKey || apiKey !== validApiKey) {
+    return res.status(401).json({ error: 'Unauthorized: Invalid or missing API key' });
+  }
+
   // Extract path from query parameter or URL path
   let { path } = req.query;
 
