@@ -1,0 +1,352 @@
+// ============================================================================
+// Task Form Handler - With Proxy Authentication
+// ============================================================================
+// Proxy Configuration
+proxy_base_url = "https://zohoprojectsproxy.vercel.app/api";
+api_key = "40b20fd4-d09a-431d-9957-1d15be24c2ad";
+
+// Get the "values" object from the form
+form_values = form.get("values");
+
+// Extract values from nested form structure
+project_id_obj = form_values.get("projectid");
+project_id = null;
+if(project_id_obj != null && project_id_obj.get("value") != null)
+{
+	project_id = project_id_obj.get("value").get("value");
+}
+
+task_name_obj = form_values.get("taskname");
+task_name = null;
+if(task_name_obj != null && task_name_obj.get("value") != null)
+{
+	task_name = task_name_obj.get("value");
+}
+
+task_description_obj = form_values.get("taskdescription");
+task_description = null;
+if(task_description_obj != null && task_description_obj.get("value") != null)
+{
+	task_description = task_description_obj.get("value");
+}
+
+status_obj = form_values.get("status");
+status = null;
+if(status_obj != null && status_obj.get("value") != null)
+{
+	status = status_obj.get("value").get("value");
+}
+
+priority_obj = form_values.get("priority");
+priority = null;
+if(priority_obj != null && priority_obj.get("value") != null)
+{
+	priority = priority_obj.get("value").get("value");
+}
+
+customer_email_obj = form_values.get("customeremail");
+customer_email = null;
+if(customer_email_obj != null && customer_email_obj.get("value") != null)
+{
+	customer_email = customer_email_obj.get("value");
+}
+
+start_date_obj = form_values.get("startdate");
+start_date = null;
+if(start_date_obj != null && start_date_obj.get("value") != null)
+{
+	start_date = start_date_obj.get("value");
+}
+
+due_date_obj = form_values.get("duedate");
+due_date = null;
+if(due_date_obj != null && due_date_obj.get("value") != null)
+{
+	due_date = due_date_obj.get("value");
+}
+
+tags_input_obj = form_values.get("tags");
+tags_input = null;
+if(tags_input_obj != null && tags_input_obj.get("value") != null)
+{
+	tags_input = tags_input_obj.get("value");
+}
+
+assignee_email_obj = form_values.get("assigneeemail");
+assignee_email = null;
+if(assignee_email_obj != null && assignee_email_obj.get("value") != null)
+{
+	assignee_email = assignee_email_obj.get("value");
+}
+
+estimated_hours_obj = form_values.get("estimatedhours");
+estimated_hours = null;
+if(estimated_hours_obj != null && estimated_hours_obj.get("value") != null)
+{
+	estimated_hours = estimated_hours_obj.get("value");
+}
+
+tasklist_id_input_obj = form_values.get("tasklistid");
+tasklist_id_input = null;
+if(tasklist_id_input_obj != null && tasklist_id_input_obj.get("value") != null)
+{
+	tasklist_id_input = tasklist_id_input_obj.get("value");
+}
+
+// ============================================================================
+// VALIDATION
+// ============================================================================
+if(project_id == null || project_id.toString() == "" || project_id.toString() == "none")
+{
+	response = Map();
+	response.put("type","banner");
+	response.put("status","failure");
+	response.put("text","Please select a valid project!");
+	return response;
+}
+
+if(task_name == null || task_name == "")
+{
+	response = Map();
+	response.put("type","banner");
+	response.put("status","failure");
+	response.put("text","Task name is required!");
+	return response;
+}
+
+if(task_name.contains("_"))
+{
+	response = Map();
+	response.put("type","banner");
+	response.put("status","failure");
+	response.put("text","Task name can contain only alphabets!");
+	return response;
+}
+
+// ============================================================================
+// OPTIONAL: LOOKUP ASSIGNEE ID BY EMAIL VIA PROXY
+// ============================================================================
+assignee_id = null;
+if(assignee_email != null && assignee_email != "")
+{
+	try 
+	{
+		users_url = proxy_base_url + "/users";
+		users_resp = invokeurl
+		[
+			url :users_url
+			type :GET
+			headers:{"x-api-key":api_key}
+		];
+		if(users_resp != null && users_resp.containsKey("users") && users_resp.get("users") != null)
+		{
+			for each  u in users_resp.get("users")
+			{
+				uemail = "";
+				if(u.containsKey("email") && u.get("email") != null)
+				{
+					uemail = u.get("email");
+				}
+				else if(u.containsKey("user") && u.get("user") != null && u.get("user").containsKey("email"))
+				{
+					uemail = u.get("user").get("email");
+				}
+				if(uemail != null && assignee_email != null)
+				{
+					if(uemail.toLowerCase() == assignee_email.toLowerCase())
+					{
+						if(u.containsKey("id") && u.get("id") != null)
+						{
+							assignee_id = u.get("id");
+						}
+						else if(u.containsKey("user") && u.get("user") != null && u.get("user").containsKey("id"))
+						{
+							assignee_id = u.get("user").get("id");
+						}
+						break;
+					}
+				}
+			}
+		}
+	}
+	catch (e)
+	{
+	}
+}
+
+// ============================================================================
+// CREATE TASK IN ZOHO PROJECTS VIA PROXY
+// ============================================================================
+try 
+{
+	create_task_url = proxy_base_url + "/projects/" + project_id + "/tasks";
+	
+	// Build task payload
+	task_payload = Map();
+	task_payload.put("name",task_name);
+	
+	if(task_description != null && task_description != "")
+	{
+		task_payload.put("description",task_description);
+	}
+	
+	// Map status to Zoho format
+	if(status != null)
+	{
+		if(status == "open")
+		{
+			task_payload.put("status","Open");
+		}
+		else if(status == "inprogress")
+		{
+			task_payload.put("status","In Progress");
+		}
+		else if(status == "inreview")
+		{
+			task_payload.put("status","In Review");
+		}
+		else if(status == "tobetested")
+		{
+			task_payload.put("status","To be Tested");
+		}
+		else if(status == "onhold")
+		{
+			task_payload.put("status","On Hold");
+		}
+		else if(status == "delayed")
+		{
+			task_payload.put("status","Delayed");
+		}
+		else if(status == "closed")
+		{
+			task_payload.put("status","Closed");
+		}
+		else if(status == "cancelled")
+		{
+			task_payload.put("status","Cancelled");
+		}
+	}
+	
+	// Map priority to Zoho format
+	if(priority != null)
+	{
+		if(priority == "high")
+		{
+			task_payload.put("priority","High");
+		}
+		else if(priority == "medium")
+		{
+			task_payload.put("priority","Medium");
+		}
+		else if(priority == "low")
+		{
+			task_payload.put("priority","Low");
+		}
+	}
+	
+	if(start_date != null && start_date != "")
+	{
+		// Convert from yyyy-MM-dd to MM-dd-yyyy format
+		date_parts = start_date.toList("-");
+		if(date_parts.size() == 3)
+		{
+			formatted_start = date_parts.get(1) + "-" + date_parts.get(2) + "-" + date_parts.get(0);
+			task_payload.put("start_date",formatted_start);
+		}
+	}
+	
+	if(due_date != null && due_date != "")
+	{
+		// Convert from yyyy-MM-dd to MM-dd-yyyy format
+		date_parts = due_date.toList("-");
+		if(date_parts.size() == 3)
+		{
+			formatted_due = date_parts.get(1) + "-" + date_parts.get(2) + "-" + date_parts.get(0);
+			task_payload.put("end_date",formatted_due);
+		}
+	}
+	
+	// Assignee/owner if available
+	if(assignee_id != null)
+	{
+		task_payload.put("person_responsible",assignee_id);
+		task_payload.put("owner",assignee_id);
+	}
+	
+	// Estimated time
+	if(estimated_hours != null && estimated_hours != "")
+	{
+		task_payload.put("estimated_time",estimated_hours.toString());
+	}
+	
+	// Tasklist placement
+	if(tasklist_id_input != null && tasklist_id_input != "")
+	{
+		task_payload.put("tasklist_id",tasklist_id_input);
+	}
+	
+	// Include customer email in description
+	if(customer_email != null && customer_email != "")
+	{
+		existing_desc = "";
+		if(task_payload.containsKey("description") && task_payload.get("description") != null)
+		{
+			existing_desc = task_payload.get("description");
+		}
+		if(existing_desc != null && existing_desc != "")
+		{
+			existing_desc = existing_desc + "\n\nCustomer Email: " + customer_email;
+		}
+		else
+		{
+			existing_desc = "Customer Email: " + customer_email;
+		}
+		task_payload.put("description",existing_desc);
+	}
+	
+	create_response = invokeurl
+	[
+		url :create_task_url
+		type :POST
+		parameters:task_payload
+		headers:{"x-api-key":api_key}
+	];
+	
+	// Check if task was created successfully
+	if(create_response.get("tasks") != null && create_response.get("tasks").size() > 0)
+	{
+		created_task = create_response.get("tasks").get(0);
+		task_id = created_task.get("id");
+		response = Map();
+		response.put("type","banner");
+		response.put("status","success");
+		response.put("text","Task created successfully!");
+		return response;
+	}
+	else if(create_response.get("task") != null)
+	{
+		created_task = create_response.get("task");
+		task_id = created_task.get("id");
+		response = Map();
+		response.put("type","banner");
+		response.put("status","success");
+		response.put("text","Task created successfully!");
+		return response;
+	}
+	else
+	{
+		response = Map();
+		response.put("type","banner");
+		response.put("status","failure");
+		response.put("text","Failed to create task!");
+		return response;
+	}
+}
+catch (e)
+{
+	response = Map();
+	response.put("type","banner");
+	response.put("status","failure");
+	response.put("text","Error creating task: " + e);
+	return response;
+}

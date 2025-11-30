@@ -1,0 +1,256 @@
+// ============================================================================
+// DETAIL HANDLER - With Project Search Bar and Empty Results Section
+// ============================================================================
+sections = Collection();
+// Header
+header_section = {"name":"header","layout":"info","title":"Zoho Projects Management Tool","data":{{"label":"Manage tasks and bugs","value":""}}};
+sections.add(header_section);
+// Proxy Configuration
+proxy_base_url = "https://zohoprojectsproxy.vercel.app/api";
+api_key = "40b20fd4-d09a-431d-9957-1d15be24c2ad";
+zoho_portal_id = "907432121";
+// Fetch Projects via Proxy
+projects = Collection();
+try 
+{
+	projects_url = proxy_base_url + "/projects";
+	projects_response = invokeurl
+	[
+		url :projects_url
+		type :GET
+		headers:{"x-api-key":api_key}
+	];
+	try 
+	{
+		for each  item in projects_response
+		{
+			projects.add(item);
+		}
+	}
+	catch (e)
+	{
+		if(projects_response.get("projects") != null)
+		{
+			projects = projects_response.get("projects");
+		}
+	}
+}
+catch (e)
+{
+}
+// Fetch Tasks and Bugs from ALL projects
+tasks_data = Collection();
+bugs_data = Collection();
+if(projects.size() > 0)
+{
+	for each  project in projects
+	{
+		project_id = project.get("id");
+		project_name = project.get("name");
+		// Fetch Tasks via Proxy
+		try 
+		{
+			tasks_url = proxy_base_url + "/projects/" + project_id + "/tasks";
+			tasks_response = invokeurl
+			[
+				url :tasks_url
+				type :GET
+				headers:{"x-api-key":api_key}
+			];
+			if(tasks_response.get("tasks") != null)
+			{
+				tasks_list = tasks_response.get("tasks");
+				for each  task in tasks_list
+				{
+					task_id = task.get("id");
+					task_name = task.get("name");
+					task_desc = ifnull(task.get("description"),"");
+					// Extract status
+					task_status = "Unknown";
+					try 
+					{
+						task_status_obj = task.get("status");
+						if(task_status_obj != null)
+						{
+							try 
+							{
+								task_status = task_status_obj.get("name");
+							}
+							catch (e)
+							{
+								task_status = task_status_obj.toString();
+							}
+						}
+					}
+					catch (e)
+					{
+					}
+					// Extract priority
+					task_priority = "Medium";
+					try 
+					{
+						task_priority_obj = task.get("priority");
+						if(task_priority_obj != null)
+						{
+							try 
+							{
+								task_priority = task_priority_obj.get("name");
+							}
+							catch (e)
+							{
+								task_priority = task_priority_obj.toString();
+							}
+						}
+					}
+					catch (e)
+					{
+					}
+					// Emojis
+					status_emoji = "🔵";
+					if(task_status.toLowerCase().contains("open"))
+					{
+						status_emoji = "🟢";
+					}
+					else if(task_status.toLowerCase().contains("complete"))
+					{
+						status_emoji = "✅";
+					}
+					priority_emoji = "🟡";
+					if(task_priority.toLowerCase().contains("high"))
+					{
+						priority_emoji = "🔴";
+					}
+					else if(task_priority.toLowerCase().contains("low"))
+					{
+						priority_emoji = "🟢";
+					}
+					// Truncate description
+					display_desc = task_desc;
+					if(display_desc != null && display_desc.length() > 100)
+					{
+						display_desc = display_desc.subString(0,97) + "...";
+					}
+					task_item = {"name":task_id.toString(),"title":"📋 " + task_name,"text":display_desc,"subtext":priority_emoji + " " + task_priority + " | " + status_emoji + " " + task_status + " | 📁 " + project_name,"link":"https://projects.zoho.com/portal/" + zoho_portal_id + "#/projects/" + project_id + "/tasks/" + task_id,"actions":{{"label":"Update","name":"updatetask","data":task_id.toString()}}};
+					tasks_data.add(task_item);
+				}
+			}
+		}
+		catch (e)
+		{
+		}
+		// Fetch Bugs via Proxy
+		try 
+		{
+			bugs_url = proxy_base_url + "/projects/" + project_id + "/bugs";
+			bugs_response = invokeurl
+			[
+				url :bugs_url
+				type :GET
+				headers:{"x-api-key":api_key}
+			];
+			if(bugs_response.get("bugs") != null)
+			{
+				bugs_list = bugs_response.get("bugs");
+				for each  bug in bugs_list
+				{
+					bug_id = bug.get("id");
+					bug_title = bug.get("title");
+					bug_desc = ifnull(bug.get("description"),"");
+					// Extract status
+					bug_status = "Unknown";
+					try 
+					{
+						bug_status_obj = bug.get("status");
+						if(bug_status_obj != null)
+						{
+							try 
+							{
+								bug_status = bug_status_obj.get("type");
+								if(bug_status == null)
+								{
+									bug_status = bug_status_obj.get("name");
+								}
+							}
+							catch (e)
+							{
+								bug_status = bug_status_obj.toString();
+							}
+						}
+					}
+					catch (e)
+					{
+					}
+					// Extract severity
+					bug_severity = "Medium";
+					try 
+					{
+						bug_severity_obj = bug.get("severity");
+						if(bug_severity_obj != null)
+						{
+							try 
+							{
+								bug_severity = bug_severity_obj.get("type");
+							}
+							catch (e)
+							{
+								bug_severity = bug_severity_obj.toString();
+							}
+						}
+					}
+					catch (e)
+					{
+					}
+					// Severity emoji
+					severity_emoji = "🟡";
+					if(bug_severity.toLowerCase().contains("critical"))
+					{
+						severity_emoji = "🔴🔴";
+					}
+					else if(bug_severity.toLowerCase().contains("high"))
+					{
+						severity_emoji = "🔴";
+					}
+					else if(bug_severity.toLowerCase().contains("low"))
+					{
+						severity_emoji = "🟢";
+					}
+					else if(bug_severity.toLowerCase().contains("none"))
+					{
+						severity_emoji = "⚪";
+					}
+					// Truncate description
+					display_desc = bug_desc;
+					if(display_desc != null && display_desc.length() > 100)
+					{
+						display_desc = display_desc.subString(0,97) + "...";
+					}
+					bug_item = {"name":bug_id.toString(),"title":"🐛 " + bug_title,"text":display_desc,"subtext":severity_emoji + " " + bug_severity + " | " + bug_status + " | 📁 " + project_name,"link":"https://projects.zoho.com/portal/" + zoho_portal_id + "#/projects/" + project_id + "/bugs/" + bug_id};
+					bugs_data.add(bug_item);
+				}
+			}
+		}
+		catch (e)
+		{
+		}
+	}
+}
+// Merged Overview Section
+if(projects.size() > 0)
+{
+	total_items = tasks_data.size() + bugs_data.size();
+	overview_data = Collection();
+	overview_data.add({"label":"Total Projects","value":projects.size().toString()});
+	overview_data.add({"label":"Total Items","value":total_items + " (" + tasks_data.size() + " tasks, " + bugs_data.size() + " bugs)"});
+	overview_section = {"name":"overview","layout":"fieldset","title":"📊 Overview","data":overview_data};
+	sections.add(overview_section);
+}
+// Quick Actions
+action_buttons_section = {"name":"actionbuttons","layout":"metric","title":"🔧 QUICK ACTIONS","data":{{"label":"Create New Items","value":""}},"actions":{{"label":"➕ Add Task","name":"addtask"},{"label":"🐛 Report Bug","name":"reportbug"}}};
+sections.add(action_buttons_section);
+// Project Search Section - Opens search form
+search_section = {"name":"searchsection","layout":"metric","title":"🔍 SEARCH PROJECTS","data":{{"label":"Search Zoho Projects","value":""}},"actions":{{"label":"🔍 Search Projects","name":"searchprojects"}}};
+sections.add(search_section);
+// EMPTY SEARCH RESULTS SECTION - Will be populated by Form Controller
+empty_results_section = {"name":"searchresults","layout":"fieldset","title":"","data":Collection()};
+sections.add(empty_results_section);
+return {"type":"widget_detail","sections":sections};

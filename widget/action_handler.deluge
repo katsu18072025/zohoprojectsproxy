@@ -1,0 +1,618 @@
+// ============================================================================
+// ACTION HANDLER - With Proxy Authentication
+// ============================================================================
+response = Map();
+actionType = action.get("type");
+action_name = action.get("name");
+
+// Proxy Configuration
+proxy_base_url = "https://zohoprojectsproxy.vercel.app/api";
+api_key = "40b20fd4-d09a-431d-9957-1d15be24c2ad";
+
+// ============================================================================
+// SEARCH PROJECTS - Show search form with autocomplete
+// ============================================================================
+if(action_name == "searchprojects")
+{
+	// Fetch all projects for autocomplete options via proxy
+	project_options = Collection();
+	try 
+	{
+		projects_url = proxy_base_url + "/projects";
+		projects_response = invokeurl
+		[
+			url :projects_url
+			type :GET
+			headers:{"x-api-key":api_key}
+		];
+		projects = Collection();
+		try 
+		{
+			for each  item in projects_response
+			{
+				projects.add(item);
+			}
+		}
+		catch (e)
+		{
+			if(projects_response.get("projects") != null)
+			{
+				projects = projects_response.get("projects");
+			}
+		}
+		// Build options for dynamic_select
+		for each  project in projects
+		{
+			proj_name = project.get("name");
+			proj_id = "" + project.get("id");
+			project_options.add({"label":proj_name,"value":proj_id});
+		}
+	}
+	catch (e)
+	{
+	}
+	response.put("type","form");
+	response.put("name","projectsearch");
+	response.put("title","🔍 Search Projects");
+	response.put("hint","Search for a project by name");
+	response.put("button_label","Search");
+	action_obj = Map();
+	action_obj.put("type","invoke.function");
+	action_obj.put("name","projectsearch");
+	response.put("action",action_obj);
+	inputs = Collection();
+	search_field = Map();
+	search_field.put("name","searchquery");
+	search_field.put("label","Project Name");
+	search_field.put("type","select");
+	search_field.put("mandatory",true);
+	search_field.put("hint","Select a project to view its details");
+	search_field.put("placeholder","Choose a project...");
+	search_field.put("options",project_options);
+	search_field.put("multiple",false);
+	inputs.add(search_field);
+	response.put("inputs",inputs);
+	return response;
+}
+// ============================================================================
+// VIEW TASKS - SHOW FORM WITH PROJECT DROPDOWN
+// ============================================================================
+if(action_name == "viewtask")
+{
+	// Fetch projects for dropdown via proxy
+	project_options = Collection();
+	project_options.add({"label":"📁 All Projects","value":"all"});
+	try 
+	{
+		projects_url = proxy_base_url + "/projects";
+		projects_response = invokeurl
+		[
+			url :projects_url
+			type :GET
+			headers:{"x-api-key":api_key}
+		];
+		projects = Collection();
+		try 
+		{
+			for each  item in projects_response
+			{
+				projects.add(item);
+			}
+		}
+		catch (e)
+		{
+			if(projects_response.get("projects") != null)
+			{
+				projects = projects_response.get("projects");
+			}
+		}
+		for each  project in projects
+		{
+			proj_id = "" + project.get("id");
+			proj_name = project.get("name");
+			project_options.add({"label":"📂 " + proj_name,"value":proj_id});
+		}
+	}
+	catch (e)
+	{
+	}
+	response.put("type","form");
+	response.put("name","taskview");
+	response.put("title","View Tasks");
+	response.put("hint","Filter tasks by project and status");
+	response.put("button_label","View Tasks");
+	action_obj = Map();
+	action_obj.put("type","invoke.function");
+	action_obj.put("name","taskview");
+	response.put("action",action_obj);
+	inputs = Collection();
+	project_field = Map();
+	project_field.put("name","projectfilter");
+	project_field.put("label","Project");
+	project_field.put("type","select");
+	project_field.put("mandatory",true);
+	project_field.put("options",project_options);
+	project_field.put("value","all");
+	inputs.add(project_field);
+	viewtype_field = Map();
+	viewtype_field.put("name","viewtype");
+	viewtype_field.put("label","Task Status");
+	viewtype_field.put("type","select");
+	viewtype_field.put("mandatory",true);
+	viewtype_options = Collection();
+	viewtype_options.add({"label":"📋 All Tasks","value":"all"});
+	viewtype_options.add({"label":"🟢 Open Tasks","value":"open"});
+	viewtype_options.add({"label":"🔵 In Progress","value":"inprogress"});
+	viewtype_options.add({"label":"✅ Completed Tasks","value":"completed"});
+	viewtype_field.put("options",viewtype_options);
+	viewtype_field.put("value","all");
+	inputs.add(viewtype_field);
+	response.put("inputs",inputs);
+	return response;
+}
+// ============================================================================
+// VIEW BUGS
+// ============================================================================
+if(action_name == "viewbug")
+{
+	project_options = Collection();
+	try 
+	{
+		projects_url = proxy_base_url + "/projects";
+		projects_response = invokeurl
+		[
+			url :projects_url
+			type :GET
+			headers:{"x-api-key":api_key}
+		];
+		projects = Collection();
+		try 
+		{
+			for each  item in projects_response
+			{
+				projects.add(item);
+			}
+		}
+		catch (e)
+		{
+			if(projects_response.get("projects") != null)
+			{
+				projects = projects_response.get("projects");
+			}
+		}
+		for each  project in projects
+		{
+			proj_id = "" + project.get("id");
+			proj_name = project.get("name");
+			project_options.add({"label":"📂 " + proj_name,"value":proj_id});
+		}
+	}
+	catch (e)
+	{
+	}
+	response.put("type","form");
+	response.put("name","bugview");
+	response.put("title","View Project Bugs");
+	response.put("hint","Select a project to open its issues page");
+	response.put("button_label","Open Issues Page");
+	action_obj = Map();
+	action_obj.put("type","invoke.function");
+	action_obj.put("name","bugview");
+	response.put("action",action_obj);
+	inputs = Collection();
+	project_field = Map();
+	project_field.put("name","projectfilter");
+	project_field.put("label","Select Project");
+	project_field.put("type","select");
+	project_field.put("mandatory",true);
+	project_field.put("options",project_options);
+	project_field.put("hint","Choose a project to view its bugs/issues");
+	inputs.add(project_field);
+	response.put("inputs",inputs);
+	return response;
+}
+// ============================================================================
+// SHOW PROJECT SELECTOR
+// ============================================================================
+else if(action_name == "showprojectselector")
+{
+	project_options = Collection();
+	try 
+	{
+		projects_url = proxy_base_url + "/projects";
+		projects_response = invokeurl
+		[
+			url :projects_url
+			type :GET
+			headers:{"x-api-key":api_key}
+		];
+		projects = Collection();
+		try 
+		{
+			for each  item in projects_response
+			{
+				projects.add(item);
+			}
+		}
+		catch (e)
+		{
+			if(projects_response.get("projects") != null)
+			{
+				projects = projects_response.get("projects");
+			}
+		}
+		if(projects.size() > 0)
+		{
+			project_options.add({"label":"📁 All Projects","value":"all"});
+			for each  project in projects
+			{
+				proj_id = "" + project.get("id");
+				proj_name = project.get("name");
+				project_options.add({"label":"📂 " + proj_name,"value":proj_id});
+			}
+		}
+		else
+		{
+			project_options.add({"label":"📁 All Projects","value":"all"});
+		}
+	}
+	catch (e)
+	{
+		project_options.add({"label":"📁 All Projects","value":"all"});
+	}
+	response.put("type","form");
+	response.put("name","projectselectorform");
+	response.put("title","Select Project");
+	response.put("hint","Choose a project to filter tasks and bugs");
+	response.put("button_label","Apply Filter");
+	action_obj = Map();
+	action_obj.put("type","invoke.function");
+	action_obj.put("name","projectselectorform");
+	response.put("action",action_obj);
+	inputs = Collection();
+	project_field = Map();
+	project_field.put("name","projectid");
+	project_field.put("label","Project");
+	project_field.put("type","select");
+	project_field.put("value","all");
+	project_field.put("options",project_options);
+	project_field.put("mandatory",true);
+	inputs.add(project_field);
+	response.put("inputs",inputs);
+	return response;
+}
+// ============================================================================
+// BACK TO MAIN VIEW
+// ============================================================================
+else if(action_name == "backtomain")
+{
+	response.put("type","invoke_detail");
+	return response;
+}
+// ============================================================================
+// CREATE TASK ACTION - WITH PROJECT SELECTOR
+// ============================================================================
+else if(action_name == "addtask")
+{
+	response = Map();
+	response.put("type","form");
+	response.put("name","taskform");
+	response.put("title","Create New Task");
+	response.put("hint","Fill in the details to create a new task in Zoho Projects");
+	response.put("button_label","Create Task");
+	action_obj = Map();
+	action_obj.put("type","invoke.function");
+	action_obj.put("name","taskform");
+	response.put("action",action_obj);
+	inputs = Collection();
+	// Fetch projects via proxy
+	project_options = Collection();
+	try 
+	{
+		projects_url = proxy_base_url + "/projects";
+		projects_response = invokeurl
+		[
+			url :projects_url
+			type :GET
+			headers:{"x-api-key":api_key}
+		];
+		try 
+		{
+			for each  item in projects_response
+			{
+				project_options.add({"label":item.get("name"),"value":item.get("id").toString()});
+			}
+		}
+		catch (e)
+		{
+			if(projects_response.get("projects") != null)
+			{
+				for each  item in projects_response.get("projects")
+				{
+					project_options.add({"label":item.get("name"),"value":item.get("id").toString()});
+				}
+			}
+		}
+	}
+	catch (e)
+	{
+	}
+	// Project selection field
+	project_field = Map();
+	project_field.put("name","projectid");
+	project_field.put("label","Project");
+	project_field.put("type","select");
+	project_field.put("hint","Select the project for this task");
+	project_field.put("mandatory",true);
+	if(project_options.size() > 0)
+	{
+		project_field.put("options",project_options);
+	}
+	else
+	{
+		default_options = Collection();
+		default_options.add({"label":"No projects available","value":"none"});
+		project_field.put("options",default_options);
+	}
+	inputs.add(project_field);
+	// Task name
+	task_name_field = Map();
+	task_name_field.put("name","taskname");
+	task_name_field.put("label","Task Name");
+	task_name_field.put("type","text");
+	task_name_field.put("hint","Enter task name (no underscores allowed)");
+	task_name_field.put("placeholder","e.g., Fix login bug");
+	task_name_field.put("mandatory",true);
+	inputs.add(task_name_field);
+	// Description
+	desc_field = Map();
+	desc_field.put("name","taskdescription");
+	desc_field.put("label","Description");
+	desc_field.put("type","textarea");
+	desc_field.put("hint","Detailed description of the task");
+	desc_field.put("placeholder","Enter task details...");
+	desc_field.put("mandatory",false);
+	inputs.add(desc_field);
+	// Status
+	status_field = Map();
+	status_field.put("name","status");
+	status_field.put("label","Status");
+	status_field.put("type","select");
+	status_field.put("mandatory",true);
+	status_opts = Collection();
+	status_opts.add({"label":"Open","value":"open"});
+	status_opts.add({"label":"In Progress","value":"inprogress"});
+	status_opts.add({"label":"In Review","value":"inreview"});
+	status_opts.add({"label":"To be Tested","value":"tobetested"});
+	status_opts.add({"label":"On Hold","value":"onhold"});
+	status_opts.add({"label":"Delayed","value":"delayed"});
+	status_opts.add({"label":"Closed","value":"closed"});
+	status_opts.add({"label":"Cancelled","value":"cancelled"});
+	status_field.put("options",status_opts);
+	inputs.add(status_field);
+	// Priority
+	priority_field = Map();
+	priority_field.put("name","priority");
+	priority_field.put("label","Priority");
+	priority_field.put("type","select");
+	priority_field.put("mandatory",true);
+	priority_opts = Collection();
+	priority_opts.add({"label":"High","value":"high"});
+	priority_opts.add({"label":"Medium","value":"medium"});
+	priority_opts.add({"label":"Low","value":"low"});
+	priority_field.put("options",priority_opts);
+	inputs.add(priority_field);
+	// Customer Email
+	customer_field = Map();
+	customer_field.put("name","customeremail");
+	customer_field.put("label","Customer Email");
+	customer_field.put("type","email");
+	customer_field.put("hint","Email address to associate with this task");
+	customer_field.put("placeholder","customer@example.com");
+	customer_field.put("mandatory",false);
+	inputs.add(customer_field);
+	// Start Date
+	start_field = Map();
+	start_field.put("name","startdate");
+	start_field.put("label","Start Date");
+	start_field.put("type","date");
+	start_field.put("hint","Task start date");
+	start_field.put("mandatory",false);
+	inputs.add(start_field);
+	// Due Date
+	due_field = Map();
+	due_field.put("name","duedate");
+	due_field.put("label","Due Date");
+	due_field.put("type","date");
+	due_field.put("hint","Task deadline");
+	due_field.put("mandatory",false);
+	inputs.add(due_field);
+	// Tags
+	tags_field = Map();
+	tags_field.put("name","tags");
+	tags_field.put("label","Tags");
+	tags_field.put("type","text");
+	tags_field.put("hint","Comma-separated tags (e.g., ui,backend,urgent)");
+	tags_field.put("placeholder","ui, backend, urgent");
+	tags_field.put("mandatory",false);
+	inputs.add(tags_field);
+	// Assignee Email
+	assignee_field = Map();
+	assignee_field.put("name","assigneeemail");
+	assignee_field.put("label","Assignee Email");
+	assignee_field.put("type","email");
+	assignee_field.put("hint","Email of project user to assign task");
+	assignee_field.put("placeholder","team@example.com");
+	assignee_field.put("mandatory",false);
+	inputs.add(assignee_field);
+	// Estimated Hours
+	hours_field = Map();
+	hours_field.put("name","estimatedhours");
+	hours_field.put("label","Estimated Hours");
+	hours_field.put("type","number");
+	hours_field.put("hint","Estimated hours to complete task");
+	hours_field.put("placeholder","8");
+	hours_field.put("mandatory",false);
+	inputs.add(hours_field);
+	// Tasklist ID
+	tasklist_field = Map();
+	tasklist_field.put("name","tasklistid");
+	tasklist_field.put("label","Tasklist ID");
+	tasklist_field.put("type","text");
+	tasklist_field.put("hint","Optional tasklist id to place the task in a specific list");
+	tasklist_field.put("placeholder","12345678");
+	tasklist_field.put("mandatory",false);
+	inputs.add(tasklist_field);
+	response.put("inputs",inputs);
+	return response;
+}
+// ============================================================================
+// CREATE BUG ACTION
+// ============================================================================
+else if(action_name == "reportbug")
+{
+	response = Map();
+	response.put("type","form");
+	response.put("name","bugform");
+	response.put("title","Report New Bug");
+	response.put("hint","Fill in the details to report a bug in Zoho Projects");
+	response.put("button_label","Create Bug");
+	action_obj = Map();
+	action_obj.put("type","invoke.function");
+	action_obj.put("name","bugform");
+	response.put("action",action_obj);
+	inputs = Collection();
+	// Fetch projects via proxy
+	project_options = Collection();
+	try 
+	{
+		projects_url = proxy_base_url + "/projects";
+		projects_response = invokeurl
+		[
+			url :projects_url
+			type :GET
+			headers:{"x-api-key":api_key}
+		];
+		try 
+		{
+			for each  item in projects_response
+			{
+				project_options.add({"label":item.get("name"),"value":item.get("id").toString()});
+			}
+		}
+		catch (e)
+		{
+			if(projects_response.get("projects") != null)
+			{
+				for each  item in projects_response.get("projects")
+				{
+					project_options.add({"label":item.get("name"),"value":item.get("id").toString()});
+				}
+			}
+		}
+	}
+	catch (e)
+	{
+	}
+	// Project selection field
+	project_field = Map();
+	project_field.put("name","projectid");
+	project_field.put("label","Project");
+	project_field.put("type","select");
+	project_field.put("hint","Select the project for this bug");
+	project_field.put("mandatory",true);
+	if(project_options.size() > 0)
+	{
+		project_field.put("options",project_options);
+	}
+	else
+	{
+		default_options = Collection();
+		default_options.add({"label":"No projects available","value":"none"});
+		project_field.put("options",default_options);
+	}
+	inputs.add(project_field);
+	// Bug Title
+	bug_title_field = Map();
+	bug_title_field.put("name","bugtitle");
+	bug_title_field.put("label","Bug Title");
+	bug_title_field.put("type","text");
+	bug_title_field.put("hint","Brief title for the bug");
+	bug_title_field.put("placeholder","Type of Bug");
+	bug_title_field.put("mandatory",true);
+	inputs.add(bug_title_field);
+	// Reporter
+	reporter_field = Map();
+	reporter_field.put("name","reporter");
+	reporter_field.put("label","Reporter");
+	reporter_field.put("type","text");
+	reporter_field.put("hint","Name of the person reporting the bug");
+	reporter_field.put("placeholder","Full Name");
+	reporter_field.put("mandatory",true);
+	inputs.add(reporter_field);
+	// Date
+	date_field = Map();
+	date_field.put("name","reportdate");
+	date_field.put("label","Report Date");
+	date_field.put("type","date");
+	date_field.put("hint","Date when the bug was reported");
+	date_field.put("mandatory",true);
+	inputs.add(date_field);
+	// Status
+	status_field = Map();
+	status_field.put("name","status");
+	status_field.put("label","Status");
+	status_field.put("type","select");
+	status_field.put("mandatory",true);
+	status_options = Collection();
+	status_options.add({"label":"Open","value":"open"});
+	status_options.add({"label":"In Progress","value":"in_progress"});
+	status_options.add({"label":"To Be Tested","value":"to_be_tested"});
+	status_options.add({"label":"Closed","value":"closed"});
+	status_field.put("options",status_options);
+	inputs.add(status_field);
+	// Assignee
+	assignee_field = Map();
+	assignee_field.put("name","assignee");
+	assignee_field.put("label","Assignee");
+	assignee_field.put("type","text");
+	assignee_field.put("hint","Person assigned to fix the bug");
+	assignee_field.put("placeholder","e.g., Unassigned or team member name");
+	assignee_field.put("mandatory",false);
+	inputs.add(assignee_field);
+	// Severity
+	severity_field = Map();
+	severity_field.put("name","severity");
+	severity_field.put("label","Severity");
+	severity_field.put("type","select");
+	severity_field.put("mandatory",true);
+	severity_options = Collection();
+	severity_options.add({"label":"Show stopper","value":"show_stopper"});
+	severity_options.add({"label":"Critical","value":"critical"});
+	severity_options.add({"label":"Major","value":"major"});
+	severity_options.add({"label":"Minor","value":"minor"});
+	severity_options.add({"label":"None","value":"none"});
+	severity_field.put("options",severity_options);
+	inputs.add(severity_field);
+	// Bug Description
+	bug_desc_field = Map();
+	bug_desc_field.put("name","bugdescription");
+	bug_desc_field.put("label","Description");
+	bug_desc_field.put("type","textarea");
+	bug_desc_field.put("hint","Detailed description of the bug");
+	bug_desc_field.put("placeholder","Describe the bug, steps to reproduce, expected vs actual behavior...");
+	bug_desc_field.put("mandatory",true);
+	inputs.add(bug_desc_field);
+	response.put("inputs",inputs);
+	return response;
+}
+// ============================================================================
+// DEFAULT - Unknown action
+// ============================================================================
+else
+{
+	response.put("type","banner");
+	response.put("status","error");
+	response.put("text","Unknown action: " + action_name);
+}
+return response;

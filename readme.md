@@ -1,318 +1,252 @@
-# Zoho Projects Secure Proxy - Vercel Deployment
+# Zoho Projects Manager - SalesIQ Widget
 
-## 🚀 Quick Setup Guide
+A secure, serverless Zoho SalesIQ widget that integrates with Zoho Projects to manage tasks and bugs directly from your customer support interface.
 
-### Step 1: Prepare Your Project
+## 🌟 Features
 
-Create the following folder structure:
+- **📋 Task Management** - View, create, and update tasks across all projects
+- **🐛 Bug Tracking** - Report and monitor bugs with severity levels
+- **🔍 Project Search** - Quick search and navigation to projects
+- **📊 Overview Dashboard** - Real-time statistics of tasks and bugs
+- **🔒 Secure Proxy** - API key authentication for enhanced security
+- **⚡ Serverless** - Deployed on Vercel for zero-maintenance scalability
+
+## 🏗️ Architecture
 
 ```
-zoho-projects-proxy/
-├── api/
-│   └── index.js          # Main serverless function
-├── package.json
-├── vercel.json
-├── .gitignore
-└── README.md
+┌─────────────────┐
+│  Zoho SalesIQ   │
+│     Widget      │
+└────────┬────────┘
+         │ API Key Auth
+         ▼
+┌─────────────────┐
+│  Vercel Proxy   │
+│   (Node.js)     │
+└────────┬────────┘
+         │ OAuth 2.0
+         ▼
+┌─────────────────┐
+│ Zoho Projects   │
+│      API        │
+└─────────────────┘
 ```
 
-### Step 2: Install Vercel CLI
+### Why a Proxy?
+
+1. **Security** - OAuth credentials never exposed to the client
+2. **Token Management** - Automatic token refresh and caching
+3. **Rate Limiting** - Centralized API call management
+4. **CORS Handling** - Seamless cross-origin requests
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+- Zoho Projects account
+- Zoho SalesIQ account
+- Vercel account (free tier works)
+- Node.js 18+ (for local development)
+
+### 1. Deploy the Proxy Server
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/katsu18072025/zohoprojectsproxy)
+
+Or manually:
 
 ```bash
-npm install -g vercel
-```
-
-### Step 3: Initialize Project
-
-```bash
-# Create project folder
-mkdir zoho-projects-proxy
-cd zoho-projects-proxy
-
-# Create api folder
-mkdir api
-
-# Initialize npm
-npm init -y
+# Clone the repository
+git clone https://github.com/katsu18072025/zohoprojectsproxy.git
+cd zohoprojectsproxy
 
 # Install dependencies
-npm install axios
+npm install
 
-# Install Vercel CLI as dev dependency
-npm install --save-dev vercel
-```
-
-### Step 4: Create Files
-
-Copy the provided files:
-- `api/index.js` - Main API handler
-- `package.json` - Dependencies
-- `vercel.json` - Vercel configuration
-- `.gitignore` - Git ignore rules
-
-### Step 5: Login to Vercel
-
-```bash
-vercel login
-```
-
-Choose your login method (GitHub, GitLab, Bitbucket, or Email)
-
-### Step 6: Deploy to Vercel
-
-```bash
-# First deployment (follow prompts)
-vercel
-
-# For production deployment
+# Deploy to Vercel
 vercel --prod
 ```
 
-During deployment, Vercel will ask:
-- **Set up and deploy?** → Yes
-- **Which scope?** → Select your account
-- **Link to existing project?** → No
-- **Project name?** → zoho-projects-proxy (or your choice)
-- **Directory?** → ./ (current directory)
-- **Override settings?** → No
+### 2. Configure Environment Variables
 
-### Step 7: Add Environment Variables
+In your Vercel dashboard, add these environment variables:
 
-**Option A: Via Vercel Dashboard (Recommended)**
-
-1. Go to https://vercel.com/dashboard
-2. Select your project
-3. Go to **Settings** → **Environment Variables**
-4. Add the following variables:
-
-```
-ZOHO_CLIENT_ID = YOUR_NEW_CLIENT_ID
-ZOHO_CLIENT_SECRET = YOUR_NEW_CLIENT_SECRET
-ZOHO_REFRESH_TOKEN = YOUR_NEW_REFRESH_TOKEN
-ZOHO_PORTAL_ID = 907432121
+```env
+ZOHO_CLIENT_ID=your_client_id
+ZOHO_CLIENT_SECRET=your_client_secret
+ZOHO_REFRESH_TOKEN=your_refresh_token
+ZOHO_PORTAL_ID=your_portal_id
+API_KEY=your_generated_api_key
 ```
 
-**Option B: Via CLI**
+**Generate a secure API key:**
+```powershell
+# PowerShell
+-join ((48..57) + (65..90) + (97..122) | Get-Random -Count 32 | ForEach-Object {[char]$_})
+```
+
+### 3. Install the Widget
+
+1. Go to Zoho SalesIQ → Settings → Developers → Widgets
+2. Create a new widget
+3. Copy the code from the `/widget` folder:
+   - **Detail Handler**: `detail_handler_final.deluge`
+   - **Action Handler**: `action_handler_proxy.deluge`
+   - **Form Controllers**:
+     - Task Form: `taskform_handler.deluge`
+     - Bug Form: `bugform_handler.deluge`
+     - Search Form: `projectsearch_handler.deluge`
+
+4. Update the API key in each handler:
+   ```deluge
+   api_key = "YOUR_API_KEY_HERE";
+   ```
+
+## 📁 Project Structure
+
+```
+zohoprojectsproxy/
+├── api/
+│   └── index.js              # Vercel serverless function (proxy)
+├── widget/
+│   ├── detail_handler_final.deluge       # Main widget display
+│   ├── action_handler_proxy.deluge       # Action handler
+│   ├── taskform_handler.deluge           # Task creation form
+│   ├── bugform_handler.deluge            # Bug reporting form
+│   └── projectsearch_handler.deluge      # Project search
+├── vercel.json               # Vercel configuration
+├── package.json              # Dependencies
+└── README.md                 # This file
+```
+
+## 🔐 Security Features
+
+- **API Key Authentication** - All proxy requests require valid API key
+- **OAuth Token Caching** - Tokens cached in memory to reduce API calls
+- **No Client-Side Secrets** - All credentials stored server-side
+- **CORS Protection** - Configured for specific origins only
+
+## 🛠️ API Endpoints
+
+The proxy server exposes these endpoints:
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/projects` | GET | List all projects |
+| `/api/projects/:id/tasks` | GET/POST | Get or create tasks |
+| `/api/projects/:id/bugs` | GET/POST | Get or create bugs |
+| `/api/users` | GET | List portal users |
+
+All endpoints require the `x-api-key` header.
+
+## 📊 Widget Features
+
+### Overview Section
+- Total projects count
+- Total tasks and bugs count
+- Quick action buttons
+
+### Task Management
+- View all tasks across projects
+- Filter by project and status
+- Create new tasks with:
+  - Priority levels (High/Medium/Low)
+  - Status tracking
+  - Due dates
+  - Assignee selection
+  - Estimated hours
+
+### Bug Tracking
+- View all bugs with severity indicators
+- Report new bugs with:
+  - Severity levels (Critical/High/Medium/Low)
+  - Status tracking
+  - Reporter information
+  - Detailed descriptions
+
+### Project Search
+- Searchable project dropdown
+- Direct links to Zoho Projects UI
+- Quick access to tasks and issues
+
+## 🔧 Development
+
+### Local Development
 
 ```bash
-vercel env add ZOHO_CLIENT_ID
-# Paste your client ID when prompted
+# Install dependencies
+npm install
 
-vercel env add ZOHO_CLIENT_SECRET
-# Paste your client secret
+# Run locally
+vercel dev
 
-vercel env add ZOHO_REFRESH_TOKEN
-# Paste your refresh token
-
-vercel env add ZOHO_PORTAL_ID
-# Enter: 907432121
+# Test the proxy
+curl -H "x-api-key: YOUR_KEY" http://localhost:3000/api/projects
 ```
 
-After adding env vars, redeploy:
-```bash
-vercel --prod
-```
+### Testing the Widget
 
-### Step 8: Get Your API URL
+1. Use Zoho SalesIQ's widget preview
+2. Test all actions (create task, report bug, search)
+3. Verify data appears in Zoho Projects
 
-After deployment, Vercel will give you a URL like:
-```
-https://zoho-projects-proxy.vercel.app
-```
+## 📝 Configuration
 
-Or find it at: https://vercel.com/dashboard → Your Project → Domains
+### Zoho OAuth Setup
 
-### Step 9: Test Your API
+1. Go to [Zoho API Console](https://api-console.zoho.com/)
+2. Create a new client (Server-based Application)
+3. Add redirect URI: `https://www.zoho.com/projects`
+4. Generate refresh token with scope: `ZohoProjects.projects.ALL`
 
-Test the endpoints:
+### Widget Customization
 
-```bash
-# Get projects
-curl https://your-app.vercel.app/api/projects
-
-# Search projects
-curl https://your-app.vercel.app/api/projects/search?query=test
-
-# Get tasks for a project
-curl https://your-app.vercel.app/api/projects/PROJECT_ID/tasks
-```
-
-## 🔧 API Endpoints
-
-Your Vercel deployment supports:
-
-- `GET /api/projects` - Get all projects
-- `GET /api/projects/search?query=xxx` - Search projects
-- `GET /api/projects/:projectId/tasks` - Get tasks
-- `GET /api/projects/:projectId/bugs` - Get bugs
-- `POST /api/projects/:projectId/tasks` - Create task
-- `POST /api/projects/:projectId/bugs` - Create bug
-- `GET /api/users` - Get portal users
-
-## 🔐 Security Notes
-
-### ⚠️ CRITICAL: Revoke Old Credentials
-
-Your exposed credentials MUST be revoked:
-
-1. Go to https://api-console.zoho.com/
-2. Find your current client
-3. Delete it
-4. Create a new self-client
-5. Generate new credentials
-6. Use the NEW credentials in Vercel
-
-### Update CORS Settings
-
-In `api/index.js`, update the CORS origin:
-
-```javascript
-'Access-Control-Allow-Origin': 'https://salesiq.zoho.com', // Your actual domain
-```
-
-Or for multiple domains:
-
-```javascript
-const allowedOrigins = [
-  'https://cliq.zoho.com',
-  'https://salesiq.zoho.com'
-];
-
-const origin = req.headers.origin;
-if (allowedOrigins.includes(origin)) {
-  res.setHeader('Access-Control-Allow-Origin', origin);
-}
-```
-
-## 🔄 Update Your Cliq Widget
-
-Update the proxy URL in all your handlers:
-
-```javascript
-// Old (INSECURE)
-zoho_client_id = "1000.3R6RRTKL8QESD39LNHKSPGBAAQHOLO";
-// ... direct API calls
-
-// New (SECURE)
-proxy_server_url = "https://zoho-projects-proxy.vercel.app/api";
-
-// Use proxy for all calls
-projects_response = invokeurl [
-    url: proxy_server_url + "/projects"
-    type: GET
-];
-```
-
-## 📊 Monitoring & Logs
-
-View logs in Vercel Dashboard:
-1. Go to your project
-2. Click **Deployments**
-3. Click on a deployment
-4. View **Functions** tab for logs
-
-## 🚀 Continuous Deployment
-
-### With Git (Recommended)
-
-1. Create a GitHub/GitLab repository
-2. Push your code:
-```bash
-git init
-git add .
-git commit -m "Initial commit"
-git remote add origin YOUR_REPO_URL
-git push -u origin main
-```
-
-3. Connect to Vercel:
-   - Go to Vercel Dashboard
-   - Import your Git repository
-   - Vercel will auto-deploy on every push
-
-### Environment Variables in Git
-
-Never commit `.env` files! Your `.gitignore` should include:
-
-```
-node_modules/
-.env
-.env.local
-.vercel
-```
+Edit the handlers to customize:
+- Portal ID (for direct links)
+- Task/Bug fields
+- Status and priority options
+- UI text and emojis
 
 ## 🐛 Troubleshooting
 
-### Issue: "Authentication failed"
-- Check environment variables in Vercel dashboard
-- Ensure credentials are not expired
-- Verify credentials are correct
+### Common Issues
 
-### Issue: "CORS error"
-- Update `Access-Control-Allow-Origin` in `api/index.js`
-- Redeploy after changes
+**"Variable 'form' is not defined"**
+- Use `arguments.get()` instead of `form.get()` in form handlers
 
-### Issue: "Function timeout"
-- Vercel free tier has 10s timeout
-- Consider upgrading for longer timeouts
-- Optimize API calls
+**"401 Unauthorized"**
+- Check API key is correctly set in Vercel
+- Verify API key matches in widget handlers
 
-### Issue: "Rate limiting"
-- Zoho has API rate limits
-- Implement caching (consider Vercel KV)
-- Add request throttling
+**"404 Not Found"**
+- Ensure `vercel.json` is deployed
+- Check endpoint URLs match proxy routes
 
-## 💡 Production Improvements
+## 📄 License
 
-### 1. Add Redis/KV for Token Caching
+MIT License - feel free to use and modify for your needs.
 
-```bash
-# Add Vercel KV
-vercel link
-vercel env pull
-npm install @vercel/kv
-```
+## 🤝 Contributing
 
-### 2. Add Rate Limiting
+Contributions welcome! Please:
+1. Fork the repository
+2. Create a feature branch
+3. Submit a pull request
 
-```javascript
-// Use vercel-rate-limit or similar
-const rateLimit = require('express-rate-limit');
-```
+## 📧 Support
 
-### 3. Add Request Validation
+For issues or questions:
+- Open a GitHub issue
+- Check Zoho SalesIQ documentation
+- Review Zoho Projects API docs
 
-```javascript
-// Validate inputs before proxying
-if (!projectId || !/^\d+$/.test(projectId)) {
-  return res.status(400).json({ error: 'Invalid project ID' });
-}
-```
+## 🏆 Cliqtrix 2025
 
-### 4. Add Logging
-
-```javascript
-// Use services like Logtail, Datadog, etc.
-console.log(`API call: ${method} ${pathStr}`);
-```
-
-## 📝 Next Steps
-
-1. ✅ Deploy to Vercel
-2. ✅ Add environment variables
-3. ✅ Test all endpoints
-4. ✅ Revoke old credentials
-5. ✅ Update Cliq widget with new proxy URL
-6. ✅ Update CORS settings
-7. ✅ Monitor logs
-8. ✅ Set up Git for continuous deployment
-
-## 📞 Support
-
-- Vercel Docs: https://vercel.com/docs
-- Zoho Projects API: https://www.zoho.com/projects/help/rest-api/
-- Issues: Check Vercel function logs
+This widget was created for the Zoho Cliqtrix 2025 competition, demonstrating:
+- Secure API integration
+- Serverless architecture
+- Modern development practices
+- User-friendly interface design
 
 ---
 
-**Remember:** Your API keys should NEVER be in your code. Always use environment variables!
+**Built with ❤️ for Zoho Cliqtrix 2025**

@@ -1,32 +1,26 @@
-# Environment variables - CRITICAL: Never commit these!
+# Dependencies
+node_modules/
+.vercel/
+
+# Environment files
 .env
 .env.local
-.env.*.local
+.env.production
 
-# Node modules
-node_modules/
-
-# Logs
-logs
-*.log
-npm-debug.log*
-
-# Runtime data
-pids
-*.pid
-*.seed
-*.pid.lock
-
-# OS files
-.DS_Store
-Thumbs.db
-
-# IDE files
+# IDE
 .vscode/
 .idea/
 *.swp
 *.swo
 
-# Production build
-dist/
-build/
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Temporary files
+*.tmp
+.cache/

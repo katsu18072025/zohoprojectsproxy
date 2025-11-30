@@ -1,0 +1,188 @@
+// ============================================================================
+// PROJECT SEARCH FORM CONTROLLER - With Proxy Authentication
+// ============================================================================
+// Proxy Configuration
+proxy_base_url = "https://zohoprojectsproxy.vercel.app/api";
+api_key = "40b20fd4-d09a-431d-9957-1d15be24c2ad";
+zoho_portal_id = "907432121";
+
+// Check if form was cancelled
+action = form.get("action");
+if("cancel".equals(action))
+{
+	return {"type":"banner","status":"info","text":"Search cancelled"};
+}
+
+search_query = "";
+selected_project_id = "";
+
+// Extract search query from form (select returns an object with label and value)
+try 
+{
+	if(form.get("values") != null)
+	{
+		values = form.get("values");
+		if(values.get("searchquery") != null)
+		{
+			searchobj = values.get("searchquery");
+			// For select input, value is an object with label and value
+			if(searchobj.get("value") != null)
+			{
+				value_obj = searchobj.get("value");
+				// Try to extract as a Map/object
+				try 
+				{
+					// If it has a "value" key, it's an object
+					if(value_obj.get("value") != null)
+					{
+						selected_project_id = value_obj.get("value");
+					}
+					// Extract label as search query
+					if(value_obj.get("label") != null)
+					{
+						search_query = value_obj.get("label").toLowerCase().trim();
+					}
+				}
+				catch (e)
+				{
+					// If extraction fails, treat it as a string
+					selected_project_id = value_obj.toString();
+					search_query = selected_project_id.toLowerCase().trim();
+				}
+			}
+		}
+	}
+}
+catch (e)
+{
+}
+
+if(search_query == "")
+{
+	return {"type":"banner","status":"failure","text":"Please enter a project name to search"};
+}
+
+// ============================================================================
+// FETCH ALL PROJECTS VIA PROXY
+// ============================================================================
+projects = Collection();
+try 
+{
+	projects_url = proxy_base_url + "/projects";
+	projects_response = invokeurl
+	[
+		url :projects_url
+		type :GET
+		headers:{"x-api-key":api_key}
+	];
+	try 
+	{
+		for each  item in projects_response
+		{
+			projects.add(item);
+		}
+	}
+	catch (e)
+	{
+		if(projects_response.get("projects") != null)
+		{
+			projects = projects_response.get("projects");
+		}
+	}
+}
+catch (e)
+{
+	return {"type":"banner","status":"failure","text":"Failed to fetch projects"};
+}
+
+// ============================================================================
+// SEARCH FOR MATCHING PROJECTS
+// If project ID is selected, find that specific project
+// Otherwise search by name
+// ============================================================================
+matched_projects = Collection();
+if(selected_project_id != "")
+{
+	// Find the specific project by ID
+	for each  project in projects
+	{
+		proj_id_str = "" + project.get("id");
+		if(proj_id_str == selected_project_id)
+		{
+			matched_projects.add(project);
+			search_query = project.get("name");
+			break;
+		}
+	}
+}
+else
+{
+	// Search by name
+	for each  project in projects
+	{
+		project_name = project.get("name").toLowerCase();
+		if(project_name.contains(search_query))
+		{
+			matched_projects.add(project);
+		}
+	}
+}
+
+// ============================================================================
+// BUILD SECTION TO UPDATE "searchresults"
+// ============================================================================
+sections = Collection();
+if(matched_projects.size() == 0)
+{
+	// No results found
+	no_results_data = Collection();
+	no_results_data.add({"label":"Search Query","value":"'" + search_query + "'"});
+	no_results_data.add({"label":"Result","value":"No projects found"});
+	search_results_section = {"name":"searchresults","layout":"fieldset","title":"❌ No Results","data":no_results_data,"actions":{{"label":"🔍 New Search","name":"searchprojects"}}};
+	sections.add(search_results_section);
+}
+else
+{
+	// Show matched projects with links
+	project_links_data = Collection();
+	for each  project in matched_projects
+	{
+		project_id = project.get("id");
+		project_name = project.get("name");
+		// Tasks link
+		tasks_url = "https://projects.zoho.com/portal/" + zoho_portal_id + "#zp/projects/" + project_id + "/tasks/custom-view/2595946000000046003/list?group_by=tasklist";
+		tasks_link = Map();
+		tasks_link.put("name","tasks_" + project_id);
+		tasks_link.put("title","📋 " + project_name + " - Tasks");
+		tasks_link.put("text","View all tasks in this project");
+		tasks_link.put("link",tasks_url);
+		tasks_link.put("link_type","open");
+		project_links_data.add(tasks_link);
+		// Issues link
+		issues_url = "https://projects.zoho.com/portal/" + zoho_portal_id + "#zp/projects/" + project_id + "/issues";
+		issues_link = Map();
+		issues_link.put("name","issues_" + project_id);
+		issues_link.put("title","🐛 " + project_name + " - Issues");
+		issues_link.put("text","View all bugs/issues in this project");
+		issues_link.put("link",issues_url);
+		issues_link.put("link_type","open");
+		project_links_data.add(issues_link);
+	}
+	// Build search results section
+	search_results_section = Map();
+	search_results_section.put("name","searchresults");
+	search_results_section.put("layout","listing");
+	search_results_section.put("title","🚀 Found " + matched_projects.size() + " project(s) for '" + search_query + "'");
+	search_results_section.put("data",project_links_data);
+	search_results_section.put("actions",{{"label":"🔍 New Search","name":"searchprojects"}});
+	sections.add(search_results_section);
+}
+
+// ============================================================================
+// RETURN SECTIONS_EDIT
+// ============================================================================
+response = Map();
+response.put("type","sections_edit");
+response.put("sections",sections);
+response.put("success_banner","Search complete!");
+return response;

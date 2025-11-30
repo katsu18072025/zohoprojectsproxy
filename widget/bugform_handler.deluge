@@ -1,0 +1,174 @@
+// ============================================================================
+// Bug Form Handler - With Proxy Authentication
+// ============================================================================
+// Proxy Configuration
+proxy_base_url = "https://zohoprojectsproxy.vercel.app/api";
+api_key = "40b20fd4-d09a-431d-9957-1d15be24c2ad";
+
+// Get the "values" object from the form
+form_values = form.get("values");
+
+// Extract values from nested form structure
+project_id_obj = form_values.get("projectid");
+project_id = null;
+if(project_id_obj != null && project_id_obj.get("value") != null)
+{
+	project_id = project_id_obj.get("value").get("value");
+}
+
+bug_title_obj = form_values.get("bugtitle");
+bug_title = null;
+if(bug_title_obj != null && bug_title_obj.get("value") != null)
+{
+	bug_title = bug_title_obj.get("value");
+}
+
+reporter_obj = form_values.get("reporter");
+reporter = null;
+if(reporter_obj != null && reporter_obj.get("value") != null)
+{
+	reporter = reporter_obj.get("value");
+}
+
+report_date_obj = form_values.get("reportdate");
+report_date = null;
+if(report_date_obj != null && report_date_obj.get("value") != null)
+{
+	report_date = report_date_obj.get("value");
+}
+
+bug_status_obj = form_values.get("status");
+bug_status = null;
+if(bug_status_obj != null && bug_status_obj.get("value") != null)
+{
+	bug_status = bug_status_obj.get("value").get("value");
+}
+
+assignee_obj = form_values.get("assignee");
+assignee = null;
+if(assignee_obj != null && assignee_obj.get("value") != null)
+{
+	assignee = assignee_obj.get("value");
+}
+
+severity_obj = form_values.get("severity");
+severity = null;
+if(severity_obj != null && severity_obj.get("value") != null)
+{
+	severity = severity_obj.get("value").get("value");
+}
+
+bug_description_obj = form_values.get("bugdescription");
+bug_description = null;
+if(bug_description_obj != null && bug_description_obj.get("value") != null)
+{
+	bug_description = bug_description_obj.get("value");
+}
+
+// ============================================================================
+// VALIDATION
+// ============================================================================
+if(project_id == null || project_id.toString() == "" || project_id.toString() == "none")
+{
+	response = Map();
+	response.put("type","banner");
+	response.put("status","failure");
+	response.put("text","Please select a valid project!");
+	return response;
+}
+
+if(bug_title == null || bug_title == "")
+{
+	response = Map();
+	response.put("type","banner");
+	response.put("status","failure");
+	response.put("text","Bug title is required!");
+	return response;
+}
+
+if(bug_description == null || bug_description == "")
+{
+	response = Map();
+	response.put("type","banner");
+	response.put("status","failure");
+	response.put("text","Bug description is required!");
+	return response;
+}
+
+// ============================================================================
+// CREATE BUG IN ZOHO PROJECTS VIA PROXY
+// ============================================================================
+try 
+{
+	create_bug_url = proxy_base_url + "/projects/" + project_id + "/bugs";
+	
+	// Build bug payload
+	bug_payload = Map();
+	bug_payload.put("title",bug_title);
+	bug_payload.put("description",bug_description);
+	bug_payload.put("flag","Internal");
+	
+	// Map severity to Zoho format
+	if(severity == "show_stopper")
+	{
+		bug_payload.put("severity","Show stopper");
+	}
+	else if(severity == "critical")
+	{
+		bug_payload.put("severity","Critical");
+	}
+	else if(severity == "major")
+	{
+		bug_payload.put("severity","Major");
+	}
+	else if(severity == "minor")
+	{
+		bug_payload.put("severity","Minor");
+	}
+	else if(severity == "none")
+	{
+		bug_payload.put("severity","None");
+	}
+	
+	// Add reporter
+	if(reporter != null && reporter != "")
+	{
+		bug_payload.put("reported_person",reporter);
+	}
+	
+	create_response = invokeurl
+	[
+		url :create_bug_url
+		type :POST
+		parameters:bug_payload
+		headers:{"x-api-key":api_key}
+	];
+	
+	// Check if bug was created successfully
+	if(create_response.get("bugs") != null && create_response.get("bugs").size() > 0)
+	{
+		created_bug = create_response.get("bugs").get(0);
+		bug_key = created_bug.get("key");
+		response = Map();
+		response.put("type","banner");
+		response.put("status","success");
+		response.put("text","Bug reported successfully!");
+		return response;
+	}
+	else
+	{
+		response = Map();
+		response.put("type","banner");
+		response.put("status","failure");
+		response.put("text","Failed to report bug!");
+		return response;
+	}
+}
+catch (e)
+{
+	response = Map();
+	response.put("type","banner");
+	response.put("status","failure");
+	response.put("text","Error creating bug: " + e);
+	return response;
+}
