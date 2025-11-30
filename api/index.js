@@ -27,7 +27,7 @@ async function getAccessToken() {
 
     const token = response.data.access_token;
     const expiresIn = response.data.expires_in || 3600;
-    
+
     // Cache token (expire 5 minutes early for safety)
     tokenCache = {
       token: token,
@@ -62,7 +62,18 @@ module.exports = async (req, res) => {
     res.setHeader(key, value);
   });
 
-  const { path } = req.query;
+  // Extract path from query parameter or URL path
+  let { path } = req.query;
+
+  // If no query path, try to extract from URL path
+  if (!path || path.length === 0) {
+    const urlPath = req.url.split('?')[0]; // Remove query string
+    const match = urlPath.match(/\/api\/(.+)/);
+    if (match) {
+      path = match[1];
+    }
+  }
+
   const method = req.method;
   const portalId = process.env.ZOHO_PORTAL_ID;
 
@@ -76,7 +87,7 @@ module.exports = async (req, res) => {
 
     // Parse the path to determine the Zoho API endpoint
     if (!path || path.length === 0) {
-      return res.status(400).json({ error: 'Invalid API path' });
+      return res.status(400).json({ error: 'Invalid API path. Use /api/projects or /api?path=projects' });
     }
 
     const pathStr = Array.isArray(path) ? path.join('/') : path;
@@ -85,25 +96,25 @@ module.exports = async (req, res) => {
     if (pathStr === 'projects' && method === 'GET') {
       zohoUrl = `https://projectsapi.zoho.com/api/v3/portal/${portalId}/projects`;
     }
-    
+
     // Route: GET /api/projects/:projectId/tasks
     else if (pathStr.match(/^projects\/[\w-]+\/tasks$/) && method === 'GET') {
       const projectId = pathStr.split('/')[1];
       zohoUrl = `https://projectsapi.zoho.com/api/v3/portal/${portalId}/projects/${projectId}/tasks`;
     }
-    
+
     // Route: GET /api/projects/:projectId/bugs
     else if (pathStr.match(/^projects\/[\w-]+\/bugs$/) && method === 'GET') {
       const projectId = pathStr.split('/')[1];
       zohoUrl = `https://projectsapi.zoho.com/api/v3/portal/${portalId}/projects/${projectId}/bugs?is_desc_needed=true`;
     }
-    
+
     // Route: POST /api/projects/:projectId/tasks
     else if (pathStr.match(/^projects\/[\w-]+\/tasks$/) && method === 'POST') {
       const projectId = pathStr.split('/')[1];
       zohoUrl = `https://projectsapi.zoho.com/restapi/portal/${portalId}/projects/${projectId}/tasks/`;
       zohoData = req.body;
-      
+
       // Handle assignee email lookup if provided
       if (zohoData.assignee_email) {
         const assigneeId = await lookupAssigneeByEmail(token, portalId, zohoData.assignee_email);
@@ -114,41 +125,41 @@ module.exports = async (req, res) => {
         delete zohoData.assignee_email;
       }
     }
-    
+
     // Route: POST /api/projects/:projectId/bugs
     else if (pathStr.match(/^projects\/[\w-]+\/bugs$/) && method === 'POST') {
       const projectId = pathStr.split('/')[1];
       zohoUrl = `https://projectsapi.zoho.com/restapi/portal/${portalId}/projects/${projectId}/bugs/`;
       zohoData = req.body;
     }
-    
+
     // Route: GET /api/users
     else if (pathStr === 'users' && method === 'GET') {
       zohoUrl = `https://projectsapi.zoho.com/restapi/portal/${portalId}/users/`;
     }
-    
+
     // Route: GET /api/projects/search?query=xxx
     else if (pathStr === 'projects/search' && method === 'GET') {
       zohoUrl = `https://projectsapi.zoho.com/api/v3/portal/${portalId}/projects`;
       const searchQuery = req.query.query;
-      
+
       const response = await axios.get(zohoUrl, {
         headers: { 'Authorization': `Zoho-oauthtoken ${token}` }
       });
-      
+
       let projects = response.data.projects || response.data;
-      
+
       // Filter by search query
       if (searchQuery) {
         const searchTerm = searchQuery.toLowerCase();
-        projects = projects.filter(p => 
+        projects = projects.filter(p =>
           p.name.toLowerCase().includes(searchTerm)
         );
       }
-      
+
       return res.status(200).json({ projects });
     }
-    
+
     else {
       return res.status(404).json({ error: 'Endpoint not found' });
     }
@@ -182,7 +193,7 @@ async function lookupAssigneeByEmail(token, portalId, email) {
     const response = await axios.get(usersUrl, {
       headers: { 'Authorization': `Zoho-oauthtoken ${token}` }
     });
-    
+
     if (response.data?.users) {
       for (const u of response.data.users) {
         const userEmail = u.email || u.user?.email;
