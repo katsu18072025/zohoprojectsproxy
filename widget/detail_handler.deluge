@@ -1,5 +1,5 @@
 // ============================================================================
-// DETAIL HANDLER - With Project Search Bar and Empty Results Section
+// DETAIL HANDLER - Optimized for 5-section limit with Recent Activity
 // ============================================================================
 sections = Collection();
 // Header
@@ -130,7 +130,7 @@ if(projects.size() > 0)
 					{
 						display_desc = display_desc.subString(0,97) + "...";
 					}
-					task_item = {"name":task_id.toString(),"title":"📋 " + task_name,"text":display_desc,"subtext":priority_emoji + " " + task_priority + " | " + status_emoji + " " + task_status + " | 📁 " + project_name,"link":"https://projects.zoho.com/portal/" + zoho_portal_id + "#/projects/" + project_id + "/tasks/" + task_id,"actions":{{"label":"Update","name":"updatetask","data":task_id.toString()}}};
+					task_item = {"name":task_id.toString(),"title":"📋 " + task_name,"text":display_desc,"subtext":priority_emoji + " " + task_priority + " | " + status_emoji + " " + task_status + " | 📁 " + project_name,"actions":{{"label":"Update","name":"updatetask","data":task_id.toString()}}};
 					tasks_data.add(task_item);
 				}
 			}
@@ -224,7 +224,7 @@ if(projects.size() > 0)
 					{
 						display_desc = display_desc.subString(0,97) + "...";
 					}
-					bug_item = {"name":bug_id.toString(),"title":"🐛 " + bug_title,"text":display_desc,"subtext":severity_emoji + " " + bug_severity + " | " + bug_status + " | 📁 " + project_name,"link":"https://projects.zoho.com/portal/" + zoho_portal_id + "#/projects/" + project_id + "/bugs/" + bug_id};
+					bug_item = {"name":bug_id.toString(),"title":"🐛 " + bug_title,"text":display_desc,"subtext":severity_emoji + " " + bug_severity + " | " + bug_status + " | 📁 " + project_name};
 					bugs_data.add(bug_item);
 				}
 			}
@@ -234,20 +234,44 @@ if(projects.size() > 0)
 		}
 	}
 }
-// Merged Overview Section
+// Combined Overview + Quick Actions Section (saves 1 section!)
 if(projects.size() > 0)
 {
 	total_items = tasks_data.size() + bugs_data.size();
 	overview_data = Collection();
 	overview_data.add({"label":"Total Projects","value":projects.size().toString()});
 	overview_data.add({"label":"Total Items","value":total_items + " (" + tasks_data.size() + " tasks, " + bugs_data.size() + " bugs)"});
-	overview_section = {"name":"overview","layout":"fieldset","title":"📊 Overview","data":overview_data};
+	overview_section = {"name":"overview","layout":"fieldset","title":"📊 Overview & Actions","data":overview_data,"actions":{{"label":"➕ Add Task","name":"addtask"},{"label":"🐛 Report Bug","name":"reportbug"}}};
 	sections.add(overview_section);
 }
-// Quick Actions
-action_buttons_section = {"name":"actionbuttons","layout":"metric","title":"🔧 QUICK ACTIONS","data":{{"label":"Create New Items","value":""}},"actions":{{"label":"➕ Add Task","name":"addtask"},{"label":"🐛 Report Bug","name":"reportbug"}}};
-sections.add(action_buttons_section);
-// Project Search Section - Opens search form
+// Recent Activity Section - Show 2 tasks + 2 bugs
+recent_items = Collection();
+task_count = 0;
+for each  task_item in tasks_data
+{
+	if(task_count >= 2)
+	{
+		break;
+	}
+	recent_items.add(task_item);
+	task_count = task_count + 1;
+}
+bug_count = 0;
+for each  bug_item in bugs_data
+{
+	if(bug_count >= 2)
+	{
+		break;
+	}
+	recent_items.add(bug_item);
+	bug_count = bug_count + 1;
+}
+if(recent_items.size() > 0)
+{
+	recent_section = {"name":"recent","layout":"listing","title":"🕐 Recent Activity (" + task_count + " tasks, " + bug_count + " bugs)","data":recent_items};
+	sections.add(recent_section);
+}
+// Project Search Section
 search_section = {"name":"searchsection","layout":"metric","title":"🔍 SEARCH PROJECTS","data":{{"label":"Search Zoho Projects","value":""}},"actions":{{"label":"🔍 Search Projects","name":"searchprojects"}}};
 sections.add(search_section);
 // EMPTY SEARCH RESULTS SECTION - Will be populated by Form Controller
